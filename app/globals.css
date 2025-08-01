@@ -2,26 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: 260 80% 15%; /* Deep purple */
+    --foreground: 0 0% 100%; /* White */
+    --card: 260 70% 25%; /* Lighter purple for cards */
+    --card-foreground: 0 0% 100%; /* White */
+    --popover: 260 70% 25%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 260 80% 50%; /* Primary purple for buttons */
+    --primary-foreground: 0 0% 100%; /* White */
+    --secondary: 260 50% 40%; /* Secondary purple */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 260 50% 40%;
+    --muted-foreground: 260 20% 70%;
+    --accent: 260 50% 40%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 260 60% 35%; /* Border color for cards */
+    --input: 260 50% 40%;
+    --ring: 260 80% 60%; /* Ring color for focus */
+    --radius: 0.75rem; /* Slightly more rounded corners */
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+@layer components {
+  .btn-primary {
+    @apply bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg font-semibold transition-colors duration-200;
+  }
+
+  .btn-secondary {
+    @apply bg-transparent border-2 border-white hover:bg-white hover:text-primary text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200;
+  }
+
+  .card {
+    @apply bg-card rounded-xl shadow-lg border border-border p-6;
+  }
+
+  .nav-link {
+    @apply px-4 py-2 rounded-lg text-muted-foreground hover:text-primary-foreground hover:bg-secondary transition-colors duration-200;
+  }
+
+  .nav-link-active {
+    @apply px-4 py-2 rounded-lg text-primary-foreground bg-secondary font-medium;
+  }
+
+  .hero-gradient {
+    background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--card)) 100%);
   }
 }
