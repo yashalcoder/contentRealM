@@ -9,7 +9,7 @@ export default function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false); // Set to false to show login/signup initially
 
   const navItems = [
-    { name: "Dashboard", href: "/", icon: "🏠" },
+    { name: "Home", href: "/home", icon: "🏠" },
     { name: "Upload", href: "/upload", icon: "📤" },
     { name: "Content", href: "/content", icon: "📝" },
     { name: "Analytics", href: "/analytics", icon: "📊" },
@@ -41,7 +41,7 @@ export default function Navbar() {
                 href={item.href}
                 className={
                   pathname === item.href ||
-                  (item.href === "/" && pathname.startsWith("/dashboard"))
+                  (item.href === "/home" && pathname.startsWith("/dashboard"))
                     ? "nav-link-active"
                     : "nav-link"
                 }

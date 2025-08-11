@@ -1,16 +1,18 @@
-"use client"
-import { useState } from "react"
+"use client";
+import { useState } from "react";
 
-export default function ContentFilters() {
-  const [activeFilter, setActiveFilter] = useState("all")
-  const [searchTerm, setSearchTerm] = useState("")
-
+export default function ContentFilters({
+  activeFilter,
+  setActiveFilter,
+  searchTerm,
+  setSearchTerm,
+}) {
   const filters = [
     { id: "all", name: "All Content", count: 23 },
-    { id: "video", name: "Video", count: 12 },
-    { id: "audio", name: "Audio", count: 8 },
-    { id: "document", name: "Document", count: 3 },
-  ]
+    { id: "Video", name: "Video", count: 12 },
+    { id: "Audio", name: "Audio", count: 8 },
+    { id: "Document", name: "Document", count: 3 },
+  ];
 
   return (
     <div className="card">
@@ -49,5 +51,5 @@ export default function ContentFilters() {
         </div>
       </div>
     </div>
-  )
+  );
 }

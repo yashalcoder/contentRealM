@@ -1,9 +1,6 @@
 "use client";
 import { useState, useRef } from "react";
-
 export default function UploadForm() {
-  const endpoint =
-    "https://9b392beb-d0a9-4419-bdee-49fe1ca2f4f9-00-1jmjo5xjz1ebw.sisko.replit.dev";
   const [dragActive, setDragActive] = useState(false);
   const [uploadType, setUploadType] = useState("video");
   const fileInputRef = useRef(null);
@@ -12,7 +9,7 @@ export default function UploadForm() {
   const [isExtracting, setIsExtracting] = useState(false);
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [copied, setCopied] = useState(false);
-
+  const endpoint = process.env.NEXT_PUBLIC_API_ENDPOINT;
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -66,9 +63,82 @@ export default function UploadForm() {
       fileInputRef.current.value = "";
     }
   };
+  // Add this function to your component to debug the current token
+  const debugToken = () => {
+    console.log("🔍 === TOKEN DEBUG START ===");
 
+    const token = localStorage.getItem("access_token");
+
+    if (!token) {
+      console.log("❌ No token found in localStorage");
+      return;
+    }
+
+    console.log("✅ Token found in localStorage");
+    console.log("🔑 Token (first 30 chars):", token.substring(0, 30) + "...");
+
+    try {
+      // Split token into parts
+      const parts = token.split(".");
+      console.log("📝 Token parts:", parts.length, "parts");
+
+      if (parts.length !== 3) {
+        console.log("❌ Invalid JWT format - should have 3 parts");
+        return;
+      }
+
+      // Decode header
+      const header = JSON.parse(atob(parts[0]));
+      console.log("📋 JWT Header:", header);
+
+      // Decode payload
+      const payload = JSON.parse(atob(parts[1]));
+      console.log("📋 JWT Payload:", payload);
+
+      // Check all available fields
+      console.log("🔍 Available fields in token:");
+      Object.keys(payload).forEach((key) => {
+        console.log(`  - ${key}: ${payload[key]}`);
+      });
+
+      // Check specifically for ID fields
+      console.log("🎯 Checking ID fields:");
+      console.log("  - id:", payload.id || "❌ MISSING");
+      console.log("  - user_id:", payload.user_id || "❌ MISSING");
+      console.log("  - sub:", payload.sub || "❌ MISSING");
+
+      // Check expiration
+      if (payload.exp) {
+        const expDate = new Date(payload.exp * 1000);
+        const now = new Date();
+        console.log("⏰ Token expires:", expDate.toLocaleString());
+        console.log("⏰ Current time:", now.toLocaleString());
+        console.log(
+          "⏰ Is expired:",
+          now > expDate ? "❌ YES - EXPIRED!" : "✅ No"
+        );
+
+        if (now > expDate) {
+          console.log("🗑️ Removing expired token");
+          localStorage.removeItem("access_token");
+        }
+      }
+    } catch (error) {
+      console.log("❌ Error decoding token:", error);
+      console.log("🗑️ Removing invalid token");
+      localStorage.removeItem("access_token");
+    }
+
+    console.log("🔍 === TOKEN DEBUG END ===");
+  };
+
+  // Modified extractText with better debugging
   const extractText = async () => {
     setIsExtracting(true);
+
+    // Debug token first
+    console.log("🚀 Starting upload process...");
+    debugToken();
 
     const form = new FormData();
 
@@ -93,18 +163,45 @@ export default function UploadForm() {
 
     try {
       console.log("Making request to backend...");
+      const token = localStorage.getItem("access_token");
+
+      if (!token) {
+        console.error("No token found in localStorage");
+        setTextContent("❌ No authentication token. Please login again.");
+        setIsExtracting(false);
+        return;
+      }
+
+      console.log("📡 Making API request with token...");
+
       const res = await fetch(`${endpoint}/api/upload`, {
         method: "POST",
         body: form,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
+      console.log("📡 Response status:", res.status);
+      console.log("📡 Response ok:", res.ok);
+
       const data = await res.json();
-      console.log("Response:", data);
+      console.log("📡 Response data:", data);
+
+      if (res.status === 401) {
+        console.error("❌ 401 Unauthorized - clearing token");
+        localStorage.removeItem("access_token");
+        setTextContent("❌ Session expired. Please login again.");
+        setIsExtracting(false);
+        return;
+      }
 
       if (data.status === "success") {
         setTextContent(data.text);
       } else {
-        setTextContent(`❌ ${data.message || "Error extracting text."}`);
+        setTextContent(
+          `❌ ${data.message || data.detail || "Error extracting text."}`
+        );
       }
     } catch (error) {
       console.error("Request failed:", error);

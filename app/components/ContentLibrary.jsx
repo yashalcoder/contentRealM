@@ -1,80 +1,88 @@
-export default function ContentLibrary() {
-  const contentItems = [
-    {
-      id: 1,
-      title: "Sunday Sermon: Faith in Action",
-      type: "Video",
-      date: "2024-01-15",
-      outputs: 12,
-      status: "Completed",
-      thumbnail: "/placeholder.svg?height=100&width=100",
-      formats: ["Reels", "Quote Cards", "Blog Post", "Social Captions"],
-    },
-    {
-      id: 2,
-      title: "Leadership Podcast Episode 45",
-      type: "Audio",
-      date: "2024-01-14",
-      outputs: 8,
-      status: "Processing",
-      thumbnail: "/placeholder.svg?height=100&width=100",
-      formats: ["Article", "Twitter Thread", "LinkedIn Post"],
-    },
-    {
-      id: 3,
-      title: "Keynote: Digital Transformation",
-      type: "Video",
-      date: "2024-01-13",
-      outputs: 15,
-      status: "Completed",
-      thumbnail: "/placeholder.svg?height=100&width=100",
-      formats: ["YouTube Shorts", "Instagram Reels", "Blog Article", "Email Newsletter"],
-    },
-    {
-      id: 4,
-      title: "Morning Devotional Series",
-      type: "Audio",
-      date: "2024-01-12",
-      outputs: 10,
-      status: "Completed",
-      thumbnail: "/placeholder.svg?height=100&width=100",
-      formats: ["Quote Cards", "Instagram Stories", "Twitter Posts"],
-    },
-    {
-      id: 5,
-      title: "Business Strategy Workshop",
-      type: "Video",
-      date: "2024-01-11",
-      outputs: 18,
-      status: "Completed",
-      thumbnail: "/placeholder.svg?height=100&width=100",
-      formats: ["LinkedIn Articles", "YouTube Shorts", "Email Series", "Slide Decks"],
-    },
-    {
-      id: 6,
-      title: "Weekly Team Meeting Notes",
-      type: "Document",
-      date: "2024-01-10",
-      outputs: 6,
-      status: "Completed",
-      thumbnail: "/placeholder.svg?height=100&width=100",
-      formats: ["Meeting Summary", "Action Items", "Follow-up Emails"],
-    },
-  ]
+"use client";
+import { useEffect, useState } from "react";
+import { FaFileAlt, FaVideo, FaHeadphones } from "react-icons/fa";
+import Link from "next/link";
+export default function ContentLibrary({ userId, filter, searchTerm }) {
+  const endpoint = process.env.NEXT_PUBLIC_API_ENDPOINT;
+  const [contentItems, setContentItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function fetchPosts() {
+      try {
+        setLoading(true);
+        const res = await fetch(`${endpoint}/my-posts/${userId}`);
+        const data = await res.json();
+
+        if (data.status === "success") {
+          const mappedContent = data.posts.map((post) => ({
+            id: post.id,
+            title: post.title,
+            type: post.FileType, // document, video, audio etc.
+            date: "N/A",
+            outputs: 1,
+            status: "Completed",
+            thumbnail: "/placeholder.svg?height=100&width=100",
+            formats: ["Original Post"],
+            url: post.url,
+            content: post.PostContent,
+          }));
+
+          setContentItems(mappedContent);
+        } else {
+          setError(data.message || "Failed to fetch posts");
+        }
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (userId) {
+      fetchPosts();
+    }
+  }, [userId]);
+
+  if (loading) return <p>Loading posts...</p>;
+  if (error) return <p>Error: {error}</p>;
+
+  // Filter by type
+  const filteredByType =
+    filter === "all"
+      ? contentItems
+      : contentItems.filter(
+          (item) => item.type.toLowerCase() === filter.toLowerCase()
+        );
+
+  // Further filter by search term (case insensitive)
+  const filteredItems = filteredByType.filter((item) =>
+    item.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="mt-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {contentItems.map((item) => (
-          <div key={item.id} className="card hover:border-primary transition-colors">
+        {filteredItems.map((item) => (
+          <div
+            key={item.id}
+            className="card hover:border-primary transition-colors"
+          >
             <div className="flex items-start space-x-4">
-              <img
-                src={item.thumbnail || "/placeholder.svg"}
-                alt={item.title}
-                className="w-16 h-16 rounded-lg object-cover bg-input"
-              />
+              <div className="w-16 h-16 rounded-lg object-cover bg-input text-white flex items-center justify-center text-2xl">
+                {item.type === "Video" ? (
+                  <FaVideo />
+                ) : item.type === "Audio" ? (
+                  <FaHeadphones />
+                ) : (
+                  <FaFileAlt />
+                )}
+              </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-medium text-white truncate">{item.title}</h3>
+                <h3 className="font-medium text-white truncate">
+                  {item.title}
+                </h3>
                 <p className="text-sm text-muted-foreground">
                   {item.type} • {item.date}
                 </p>
@@ -93,7 +101,9 @@ export default function ContentLibrary() {
             </div>
 
             <div className="mt-4">
-              <p className="text-sm text-muted-foreground mb-2">{item.outputs} content pieces generated:</p>
+              <p className="text-sm text-muted-foreground mb-2">
+                {item.outputs} content pieces generated:
+              </p>
               <div className="flex flex-wrap gap-1">
                 {item.formats.map((format, index) => (
                   <span
@@ -107,7 +117,12 @@ export default function ContentLibrary() {
             </div>
 
             <div className="mt-4 flex space-x-2">
-              <button className="flex-1 btn-primary text-sm py-2">View Content</button>
+              <Link href={`/view-content/${item.id}`}>
+                <div className="flex-1 btn-primary text-sm py-2 text-center">
+                  View Content
+                </div>
+              </Link>
+
               <button className="px-3 py-2 text-muted-foreground hover:text-white border border-border rounded-lg hover:border-ring">
                 ⋯
               </button>
@@ -116,5 +131,5 @@ export default function ContentLibrary() {
         ))}
       </div>
     </div>
-  )
+  );
 }
