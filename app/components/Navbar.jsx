@@ -1,13 +1,13 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react"; // Import useState
+import { useState, useEffect } from "react"; // Import useState
 
 export default function Navbar() {
   const pathname = usePathname();
   // Simulate login state for demonstration. In a real app, this would come from auth context/session.
   const [isLoggedIn, setIsLoggedIn] = useState(false); // Set to false to show login/signup initially
-
+  const [userName, setUserName] = useState(""); // Example user name
   const navItems = [
     { name: "Home", href: "/home", icon: "🏠" },
     { name: "Upload", href: "/upload", icon: "📤" },
@@ -15,7 +15,21 @@ export default function Navbar() {
     { name: "Analytics", href: "/analytics", icon: "📊" },
     { name: "Calendar", href: "/calendar", icon: "📅" },
     { name: "Team", href: "/team", icon: "👥" },
+    { name: "Ai Tools", href: "/aiTools", icon: "🤖" },
   ];
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      setIsLoggedIn(true);
+      try {
+        const parts = token.split(".");
+        const payload = JSON.parse(atob(parts[1]));
+        setUserName(payload.email?.slice(0, 5) || "User");
+      } catch (e) {
+        console.error("Invalid token format", e);
+      }
+    }
+  }, []); // [] means sirf mount pe chalega, har render pe nahi
 
   return (
     <nav className="bg-background shadow-lg border-b border-border">
@@ -62,10 +76,12 @@ export default function Navbar() {
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
                   <span className="text-sm font-medium text-primary-foreground">
-                    JD
+                    {userName.charAt(0).toUpperCase()}
                   </span>
                 </div>
-                <span className="text-sm font-medium text-white">John Doe</span>
+                <span className="text-sm font-medium text-white">
+                  {userName}
+                </span>
               </div>
             </div>
           ) : (

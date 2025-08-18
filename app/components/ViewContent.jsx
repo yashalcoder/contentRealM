@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import { useParams } from "next/navigation";
-
+import ScheduleModal from "./SchedulePostModel";
 export default function ContentDetail({ params }) {
   const paramData = useParams();
   console.log("in view contnet", paramData.id);
@@ -14,11 +14,11 @@ export default function ContentDetail({ params }) {
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   // For editing form
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-
+  const [user, setUser] = useState(null); // For user info
   // For platform selection
   const [selectedPlatforms, setSelectedPlatforms] = useState({
     linkedin: false,
@@ -27,6 +27,19 @@ export default function ContentDetail({ params }) {
 
   const [postingStatus, setPostingStatus] = useState(null);
 
+  // ✅ Get token and user only on client side
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      try {
+        const parts = token.split(".");
+        const payload = JSON.parse(atob(parts[1]));
+        setUser(payload);
+      } catch (err) {
+        console.error("Invalid token:", err);
+      }
+    }
+  }, []);
   useEffect(() => {
     async function fetchPost() {
       if (!id) return null; // safety check
@@ -74,28 +87,6 @@ export default function ContentDetail({ params }) {
     }
   }
 
-  async function handlePostToLinkedIn() {
-    if (!selectedPlatforms.linkedin) return alert("Select LinkedIn first");
-
-    try {
-      setPostingStatus("Posting to LinkedIn...");
-      const res = await fetch(`${endpoint}/post/linkedin`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-      const data = await res.json();
-
-      if (data.status === "success") {
-        setPostingStatus("Posted to LinkedIn successfully!");
-      } else {
-        setPostingStatus("Failed to post: " + (data.message || ""));
-      }
-    } catch (err) {
-      setPostingStatus("Error: " + err.message);
-    }
-  }
-
   if (loading) return <p>Loading post...</p>;
   if (error) return <p>Error: {error}</p>;
 
@@ -127,25 +118,6 @@ export default function ContentDetail({ params }) {
           className="w-full p-2 mb-4 rounded bg-input text-white"
         />
 
-        <div className="mb-4">
-          <h2 className="font-semibold mb-2">Post to Platforms</h2>
-          <label className="inline-flex items-center mr-4">
-            <input
-              type="checkbox"
-              checked={selectedPlatforms.linkedin}
-              onChange={() =>
-                setSelectedPlatforms((prev) => ({
-                  ...prev,
-                  linkedin: !prev.linkedin,
-                }))
-              }
-              className="mr-2"
-            />
-            LinkedIn
-          </label>
-          {/* Add more platforms here in future */}
-        </div>
-
         <div className="flex space-x-4">
           <button
             onClick={handleSave}
@@ -155,15 +127,10 @@ export default function ContentDetail({ params }) {
           </button>
 
           <button
-            // onClick={handlePostToLinkedIn}
-            disabled={!selectedPlatforms.linkedin}
-            className={`px-4 py-2 rounded ${
-              selectedPlatforms.linkedin
-                ? "btn-secondary"
-                : "opacity-50 cursor-not-allowed"
-            }`}
+            onClick={() => setIsScheduleModalOpen(true)}
+            className="btn-primary px-4 py-2 rounded"
           >
-            Post to LinkedIn
+            Schedule Post
           </button>
         </div>
 
@@ -171,6 +138,12 @@ export default function ContentDetail({ params }) {
           <p className="mt-4 text-sm text-yellow-300">{postingStatus}</p>
         )}
       </div>
+      <ScheduleModal
+        isOpen={isScheduleModalOpen}
+        onClose={() => setIsScheduleModalOpen(false)}
+        content_id={id}
+        currentUser={user}
+      />
       <Footer />
     </>
   );
