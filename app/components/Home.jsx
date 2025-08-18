@@ -6,7 +6,7 @@ import DashboardStats from "./DashboardStats";
 import QuickActions from "./QuickActions";
 import RecentContent from "./RecentContent";
 import PerformanceInsights from "./PerformanceInsights";
-import AIProfileSetup from "./AIProfileSetup"; // New component
+import AIProfileSetup from "./AiProfileSetup"; // New component
 import Link from "next/link";
 import { useState, useEffect } from "react";
 const endpoint = process.env.NEXT_PUBLIC_API_ENDPOINT;
