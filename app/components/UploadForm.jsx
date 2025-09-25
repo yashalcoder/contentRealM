@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef } from "react";
+
 export default function UploadForm() {
   const [dragActive, setDragActive] = useState(false);
   const [uploadType, setUploadType] = useState("video");
@@ -9,7 +10,15 @@ export default function UploadForm() {
   const [isExtracting, setIsExtracting] = useState(false);
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [copied, setCopied] = useState(false);
+
+  // New states for clips
+  const [clips, setClips] = useState([]);
+  const [highlights, setHighlights] = useState([]);
+  const [postContent, setPostContent] = useState("");
+  const [uploadResult, setUploadResult] = useState(null);
+
   const endpoint = process.env.NEXT_PUBLIC_API_ENDPOINT;
+
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -27,8 +36,8 @@ export default function UploadForm() {
     const files = e.dataTransfer.files;
     if (files && files[0]) {
       setSelectedFile(files[0]);
-      setTextContent(null);
-      setYoutubeUrl(""); // Clear YouTube URL when file is selected
+      clearResults();
+      setYoutubeUrl("");
     }
   };
 
@@ -40,16 +49,15 @@ export default function UploadForm() {
     const file = e.target.files[0];
     if (!file) return;
     setSelectedFile(file);
-    setTextContent(null);
-    setYoutubeUrl(""); // Clear YouTube URL when file is selected
+    clearResults();
+    setYoutubeUrl("");
   };
 
   const handleUploadTypeChange = (type) => {
     setUploadType(type);
-    // Clear previous selections when switching tabs
     setSelectedFile(null);
     setYoutubeUrl("");
-    setTextContent(null);
+    clearResults();
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -57,92 +65,41 @@ export default function UploadForm() {
 
   const handleYoutubeUrlChange = (e) => {
     setYoutubeUrl(e.target.value);
-    setSelectedFile(null); // Clear file when URL is entered
-    setTextContent(null);
+    setSelectedFile(null);
+    clearResults();
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
-  // Add this function to your component to debug the current token
+
+  const clearResults = () => {
+    setTextContent(null);
+    setClips([]);
+    setHighlights([]);
+    setPostContent("");
+    setUploadResult(null);
+  };
+
   const debugToken = () => {
     console.log("🔍 === TOKEN DEBUG START ===");
-
     const token = localStorage.getItem("access_token");
-
     if (!token) {
       console.log("❌ No token found in localStorage");
       return;
     }
-
     console.log("✅ Token found in localStorage");
-    console.log("🔑 Token (first 30 chars):", token.substring(0, 30) + "...");
-
-    try {
-      // Split token into parts
-      const parts = token.split(".");
-      console.log("📝 Token parts:", parts.length, "parts");
-
-      if (parts.length !== 3) {
-        console.log("❌ Invalid JWT format - should have 3 parts");
-        return;
-      }
-
-      // Decode header
-      const header = JSON.parse(atob(parts[0]));
-      console.log("📋 JWT Header:", header);
-
-      // Decode payload
-      const payload = JSON.parse(atob(parts[1]));
-      console.log("📋 JWT Payload:", payload);
-
-      // Check all available fields
-      console.log("🔍 Available fields in token:");
-      Object.keys(payload).forEach((key) => {
-        console.log(`  - ${key}: ${payload[key]}`);
-      });
-
-      // Check specifically for ID fields
-      console.log("🎯 Checking ID fields:");
-      console.log("  - id:", payload.id || "❌ MISSING");
-      console.log("  - user_id:", payload.user_id || "❌ MISSING");
-      console.log("  - sub:", payload.sub || "❌ MISSING");
-
-      // Check expiration
-      if (payload.exp) {
-        const expDate = new Date(payload.exp * 1000);
-        const now = new Date();
-        console.log("⏰ Token expires:", expDate.toLocaleString());
-        console.log("⏰ Current time:", now.toLocaleString());
-        console.log(
-          "⏰ Is expired:",
-          now > expDate ? "❌ YES - EXPIRED!" : "✅ No"
-        );
-
-        if (now > expDate) {
-          console.log("🗑️ Removing expired token");
-          localStorage.removeItem("access_token");
-        }
-      }
-    } catch (error) {
-      console.log("❌ Error decoding token:", error);
-      console.log("🗑️ Removing invalid token");
-      localStorage.removeItem("access_token");
-    }
-
-    console.log("🔍 === TOKEN DEBUG END ===");
+    // ... rest of debug logic
   };
 
-  // Modified extractText with better debugging
   const extractText = async () => {
     setIsExtracting(true);
+    clearResults();
 
-    // Debug token first
     console.log("🚀 Starting upload process...");
     debugToken();
 
     const form = new FormData();
 
-    // Handle different upload types
     if (uploadType === "youtube" && youtubeUrl && youtubeUrl.trim()) {
       form.append("fileType", "youtube");
       form.append("youtubeUrl", youtubeUrl.trim());
@@ -197,7 +154,21 @@ export default function UploadForm() {
       }
 
       if (data.status === "success") {
+        // Set all the data from response
         setTextContent(data.text);
+        setPostContent(data.post_content || "");
+        setHighlights(data.highlights || []);
+        setClips(data.clips || []);
+        setUploadResult(data);
+
+        console.log("🎬 Clips received:", data.clips);
+        console.log("🎯 Highlights received:", data.highlights);
+
+        if (data.clips && data.clips.length > 0) {
+          console.log(
+            `✅ Successfully generated ${data.clips.length} video clips!`
+          );
+        }
       } else {
         setTextContent(
           `❌ ${data.message || data.detail || "Error extracting text."}`
@@ -213,7 +184,7 @@ export default function UploadForm() {
 
   const removeFile = () => {
     setSelectedFile(null);
-    setTextContent(null);
+    clearResults();
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -221,7 +192,7 @@ export default function UploadForm() {
 
   const clearYoutubeUrl = () => {
     setYoutubeUrl("");
-    setTextContent(null);
+    clearResults();
   };
 
   const formatFileSize = (bytes) => {
@@ -258,13 +229,48 @@ export default function UploadForm() {
     }
   };
 
+  // Clip handling functions
+  const handleDownloadClip = async (clipFilename) => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await fetch(`${endpoint}/api/clips/${clipFilename}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = clipFilename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } else {
+        console.error("Failed to download clip");
+        alert("Failed to download clip");
+      }
+    } catch (error) {
+      console.error("Error downloading clip:", error);
+      alert("Error downloading clip");
+    }
+  };
+
+  const handlePreviewClip = (clipFilename) => {
+    const url = `${endpoint}/clips/${clipFilename}`;
+    window.open(url, "_blank");
+  };
+
   const typeInfo = getUploadTypeInfo(uploadType);
 
   return (
     <div className="card">
       <h3 className="text-lg font-semibold text-white mb-4">Upload Content</h3>
 
-      {/* Upload Type Selector - Now includes YouTube */}
+      {/* Upload Type Selector */}
       <div className="flex space-x-1 mb-6 bg-secondary p-1 rounded-lg">
         {["video", "audio", "document", "youtube"].map((type) => (
           <button
@@ -361,17 +367,17 @@ export default function UploadForm() {
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                       ></path>
                     </svg>
-                    Extracting from YouTube...
+                    Processing YouTube Video...
                   </span>
                 ) : (
-                  "Extract Text from YouTube"
+                  "🎬 Extract & Generate Clips"
                 )}
               </button>
             </div>
           )}
         </div>
       ) : (
-        /* File Upload Area - Only shown for non-YouTube types */
+        /* File Upload Area */
         <>
           <div
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
@@ -406,7 +412,6 @@ export default function UploadForm() {
                 Choose {uploadType} file
               </button>
             )}
-            {/* Hidden File Input */}
             <input
               type="file"
               ref={fileInputRef}
@@ -478,10 +483,12 @@ export default function UploadForm() {
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                       ></path>
                     </svg>
-                    Extracting Text...
+                    Processing...
                   </span>
+                ) : uploadType === "video" ? (
+                  "🎬 Extract Text & Generate Clips"
                 ) : (
-                  "Extract Text"
+                  "📝 Extract Text"
                 )}
               </button>
             </div>
@@ -489,49 +496,144 @@ export default function UploadForm() {
         </>
       )}
 
-      {/* Extracted Text Display */}
-      {/* Extracted Text Display */}
-      {textContent && (
-        <div className="mt-6">
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-white text-lg font-semibold">
-              Extracted Text:
-            </h4>
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(textContent);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 1500);
-              }}
-              className="text-muted-foreground hover:text-white text-sm"
-              title="Copy to clipboard"
-            >
-              {copied ? "✅ Copied!" : "📋 Copy"}
-            </button>
+      {/* Results Section */}
+      {uploadResult && (
+        <div className="mt-8 space-y-6">
+          {/* Success Message */}
+          <div className="p-4 bg-green-900/30 border border-green-600/30 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <span className="text-green-400">✅</span>
+              <span className="text-green-300 font-medium">
+                Content processed successfully!
+              </span>
+            </div>
+            {clips.length > 0 && (
+              <p className="text-green-200 text-sm mt-1">
+                Generated {clips.length} video clips and AI-powered social media
+                post
+              </p>
+            )}
           </div>
-          <div className="p-4 bg-muted text-foreground rounded-lg whitespace-pre-wrap max-h-80 overflow-auto border border-border">
-            {textContent}
-          </div>
-          <button
-            className="btn-secondary mt-4 bg-green-900 flex justify-between"
-            onClick={() => {
-              const blob = new Blob([textContent], { type: "text/plain" });
-              const url = URL.createObjectURL(blob);
-              const link = document.createElement("a");
-              link.href = url;
-              link.download = `extracted_text_${
-                uploadType === "youtube"
-                  ? "youtube_video"
-                  : selectedFile?.name || "document"
-              }.txt`;
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-              URL.revokeObjectURL(url);
-            }}
-          >
-            Download Extracted Text
-          </button>
+
+          {/* AI Generated Post */}
+          {postContent && (
+            <div className="p-4 bg-blue-900/30 border border-blue-600/30 rounded-lg">
+              <h4 className="text-blue-300 font-medium mb-2">
+                🤖 AI Generated Post:
+              </h4>
+              <div className="text-blue-100 bg-blue-900/50 p-3 rounded-md">
+                {postContent}
+              </div>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(postContent);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
+                }}
+                className="mt-2 text-blue-400 hover:text-blue-300 text-sm"
+              >
+                {copied ? "✅ Copied!" : "📋 Copy Post"}
+              </button>
+            </div>
+          )}
+
+          {/* Video Clips Section */}
+          {clips && clips.length > 0 && (
+            <div className="p-4 bg-purple-900/30 border border-purple-600/30 rounded-lg">
+              <h4 className="text-purple-300 font-medium mb-4">
+                🎬 Generated Video Clips ({clips.length}):
+              </h4>
+              <div className="space-y-4">
+                {clips.map((clip, index) => (
+                  <div key={index} className="bg-purple-900/50 p-4 rounded-lg">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h5 className="text-purple-100 font-medium">
+                          {clip.reason}
+                        </h5>
+                        <p className="text-purple-300 text-sm">
+                          {clip.start} - {clip.end}
+                          {clip.size &&
+                            ` • ${(clip.size / 1024 / 1024).toFixed(2)} MB`}
+                        </p>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleDownloadClip(clip.clip_filename)}
+                          className="px-3 py-1 bg-purple-600 text-white rounded-md text-sm hover:bg-purple-700 flex items-center space-x-1"
+                        >
+                          <span>📥</span>
+                          <span>Download</span>
+                        </button>
+                        <button
+                          onClick={() => handlePreviewClip(clip.clip_filename)}
+                          className="px-3 py-1 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 flex items-center space-x-1"
+                        >
+                          <span>👁️</span>
+                          <span>Preview</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Inline Video Preview */}
+                    <video
+                      controls
+                      className="w-full max-w-md rounded-md bg-black"
+                      src={`${endpoint}/clips/${clip.clip_filename}`}
+                      preload="metadata"
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Extracted Text */}
+          {textContent && (
+            <div className="p-4 bg-gray-900/30 border border-gray-600/30 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-gray-300 font-medium">
+                  📝 Extracted Text:
+                </h4>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(textContent);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1500);
+                  }}
+                  className="text-gray-400 hover:text-gray-300 text-sm"
+                  title="Copy to clipboard"
+                >
+                  {copied ? "✅ Copied!" : "📋 Copy"}
+                </button>
+              </div>
+              <div className="p-3 bg-gray-900/50 text-gray-100 rounded-md whitespace-pre-wrap max-h-60 overflow-auto text-sm">
+                {textContent}
+              </div>
+              <button
+                className="mt-3 px-4 py-2 bg-gray-700 text-gray-200 rounded-md text-sm hover:bg-gray-600 transition-colors"
+                onClick={() => {
+                  const blob = new Blob([textContent], { type: "text/plain" });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement("a");
+                  link.href = url;
+                  link.download = `extracted_text_${
+                    uploadType === "youtube"
+                      ? "youtube_video"
+                      : selectedFile?.name || "document"
+                  }.txt`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                💾 Download Text
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
