@@ -15,7 +15,7 @@ export default function UploadForm() {
   // New states for clips
   const [clips, setClips] = useState([]);
   const [highlights, setHighlights] = useState([]);
-  const [postContent, setPostContent] = useState("");
+  const [postContent, setPostContent] = useState([]);
   const [uploadResult, setUploadResult] = useState(null);
   const [posts, setPosts] = useState(1);
   const endpoint = process.env.NEXT_PUBLIC_API_ENDPOINT;
@@ -77,7 +77,7 @@ export default function UploadForm() {
     setTextContent(null);
     setClips([]);
     setHighlights([]);
-    setPostContent("");
+    setPostContent([]);
     setUploadResult(null);
   };
 
@@ -90,6 +90,15 @@ export default function UploadForm() {
     }
     console.log("✅ Token found in localStorage");
     // ... rest of debug logic
+  };
+  const parsePostContent = (postContentString) => {
+    if (!postContentString) return [];
+
+    // Split by "Post X:" pattern and filter empty strings
+    const postMatches = postContentString.split(/Post \d+:\n/);
+    return postMatches
+      .filter((post) => post.trim().length > 0)
+      .map((post) => post.trim());
   };
   const extractTextDocument = async (num) => {
     setIsExtracting(true);
@@ -137,9 +146,11 @@ export default function UploadForm() {
       }
 
       if (data.status === "success") {
+        const parsedPosts = parsePostContent(data.post_content);
+        setPostContent(parsedPosts);
         // Set all the data from response
         setTextContent(data.text);
-        setPostContent(data.post_content || "");
+
         setHighlights(data.highlights || []);
         setClips(data.clips || []);
         setUploadResult(data);
@@ -234,7 +245,8 @@ export default function UploadForm() {
       if (data.status === "success") {
         // Set all the data from response
         setTextContent(data.text);
-        setPostContent(data.post_content || "");
+        const parsedPosts = parsePostContent(data.post_content);
+        setPostContent(parsedPosts);
         setHighlights(data.highlights || []);
         setClips(data.clips || []);
         setUploadResult(data);
@@ -644,24 +656,32 @@ export default function UploadForm() {
           </div>
 
           {/* AI Generated Post */}
-          {postContent && (
-            <div className="p-4 bg-blue-900/30 border border-blue-600/30 rounded-lg">
-              <h4 className="text-blue-300 font-medium mb-2">
-                🤖 AI Generated Post:
-              </h4>
-              <div className="text-blue-100 bg-blue-900/50 p-3 rounded-md">
-                {postContent}
-              </div>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(postContent);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 1500);
-                }}
-                className="mt-2 text-blue-400 hover:text-blue-300 text-sm"
-              >
-                {copied ? "✅ Copied!" : "📋 Copy Post"}
-              </button>
+          {/* AI Generated Posts */}
+          {Array.isArray(postContent) && postContent.length > 0 && (
+            <div className="space-y-4">
+              {postContent.map((content, index) => (
+                <div
+                  key={index}
+                  className="p-4 bg-blue-900/30 border border-blue-600/30 rounded-lg"
+                >
+                  <h4 className="text-blue-300 font-medium mb-2">
+                    🤖 AI Generated Post {index + 1}:
+                  </h4>
+                  <div className="text-blue-100 bg-blue-900/50 p-3 rounded-md whitespace-pre-line">
+                    {content}
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(content);
+                      setCopied(index);
+                      setTimeout(() => setCopied(null), 1500);
+                    }}
+                    className="mt-2 text-blue-400 hover:text-blue-300 text-sm"
+                  >
+                    {copied === index ? "✅ Copied!" : "📋 Copy Post"}
+                  </button>
+                </div>
+              ))}
             </div>
           )}
 
