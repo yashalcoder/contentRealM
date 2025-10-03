@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation"; // Import useRouter
 import Swal from "sweetalert2";
-
+import { Eye, EyeOff } from "lucide-react";
 export default function SignupForm() {
   const [formData, setFormData] = useState({
     firstName: "",
@@ -13,6 +13,8 @@ export default function SignupForm() {
     confirmPassword: "",
     userType: "speaker",
   });
+  const [show, setShow] = useState(false);
+  const [show1, setShow1] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter(); // Initialize useRouter
   const apiEndpoint = process.env.NEXT_PUBLIC_API_ENDPOINT;
@@ -209,7 +211,7 @@ export default function SignupForm() {
             >
               Password
             </label>
-            <input
+            {/* <input
               id="password"
               name="password"
               type="password"
@@ -218,7 +220,26 @@ export default function SignupForm() {
               onChange={handleChange}
               className="w-full px-3 py-3 bg-input border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-foreground placeholder-muted-foreground"
               placeholder="Create a strong password"
-            />
+            /> */}
+            <div className="w-full relative">
+              <input
+                id="password"
+                name="password"
+                type={show1 ? "text" : "password"}
+                required
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Create a strong password"
+                className="w-full px-3 py-3 pr-10 bg-input border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-foreground placeholder-muted-foreground"
+              />
+              <button
+                type="button"
+                onClick={() => setShow1(!show1)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {show1 ? <Eye size={20} /> : <EyeOff size={20} />}
+              </button>
+            </div>
           </div>
 
           <div>
@@ -228,7 +249,7 @@ export default function SignupForm() {
             >
               Confirm Password
             </label>
-            <input
+            {/* <input
               id="confirmPassword"
               name="confirmPassword"
               type="password"
@@ -237,7 +258,26 @@ export default function SignupForm() {
               onChange={handleChange}
               className="w-full px-3 py-3 bg-input border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-foreground placeholder-muted-foreground"
               placeholder="Confirm your password"
-            />
+            /> */}
+            <div className="w-full relative">
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type={show ? "text" : "password"}
+                required
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="Confirm your password"
+                className="w-full px-3 py-3 pr-10 bg-input border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-foreground placeholder-muted-foreground"
+              />
+              <button
+                type="button"
+                onClick={() => setShow(!show)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {show ? <Eye size={20} /> : <EyeOff size={20} />}
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center">

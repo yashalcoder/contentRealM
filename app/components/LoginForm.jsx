@@ -3,12 +3,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation"; // Import useRouter
 import Swal from "sweetalert2";
+import { Eye, EyeOff } from "lucide-react";
 const apiEndpoint = process.env.NEXT_PUBLIC_API_ENDPOINT;
 export default function LoginForm() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
+  const [show, setShow] = useState(false);
   const router = useRouter(); // Initialize useRouter
   const [loading, setLoading] = useState(false);
   const handleSubmit = async (e) => {
@@ -103,16 +105,25 @@ export default function LoginForm() {
           >
             Password
           </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            value={formData.password}
-            onChange={handleChange}
-            className="w-full px-3 py-3 bg-input border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-foreground placeholder-muted-foreground"
-            placeholder="Enter your password"
-          />
+          <div className="w-full relative">
+            <input
+              id="password"
+              name="password"
+              type={show ? "text" : "password"}
+              required
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="Enter your password"
+              className="w-full px-3 py-3 pr-10 bg-input border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-foreground placeholder-muted-foreground"
+            />
+            <button
+              type="button"
+              onClick={() => setShow(!show)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              {show ? <Eye size={20} /> : <EyeOff size={20} />}
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center justify-between">

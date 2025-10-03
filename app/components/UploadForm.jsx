@@ -1,4 +1,5 @@
 "use client";
+import { FileType } from "lucide-react";
 import { useState, useRef } from "react";
 
 export default function UploadForm() {
@@ -10,13 +11,13 @@ export default function UploadForm() {
   const [isExtracting, setIsExtracting] = useState(false);
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [copied, setCopied] = useState(false);
-
+  const [activePostNum, setActivePostNum] = useState(null);
   // New states for clips
   const [clips, setClips] = useState([]);
   const [highlights, setHighlights] = useState([]);
   const [postContent, setPostContent] = useState("");
   const [uploadResult, setUploadResult] = useState(null);
-
+  const [posts, setPosts] = useState(1);
   const endpoint = process.env.NEXT_PUBLIC_API_ENDPOINT;
 
   const handleDrag = (e) => {
@@ -90,9 +91,84 @@ export default function UploadForm() {
     console.log("✅ Token found in localStorage");
     // ... rest of debug logic
   };
+  const extractTextDocument = async (num) => {
+    setIsExtracting(true);
+    setActivePostNum(num);
+    clearResults();
+    const form = new FormData();
 
+    form.append("fileType", uploadType);
+    form.append("file", selectedFile);
+    form.append("no_of_posts", num);
+    console.log("Sending file:", selectedFile.name);
+    try {
+      console.log("Making request to backend...");
+      const token = localStorage.getItem("access_token");
+
+      if (!token) {
+        console.error("No token found in localStorage");
+        setTextContent("❌ No authentication token. Please login again.");
+        setIsExtracting(false);
+        return;
+      }
+
+      console.log("📡 Making API request with token...");
+
+      const res = await fetch(`${endpoint}/api/upload`, {
+        method: "POST",
+        body: form,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      console.log("📡 Response status:", res.status);
+      console.log("📡 Response ok:", res.ok);
+
+      const data = await res.json();
+      console.log("📡 Response data:", data);
+
+      if (res.status === 401) {
+        console.error("❌ 401 Unauthorized - clearing token");
+        localStorage.removeItem("access_token");
+        setTextContent("❌ Session expired. Please login again.");
+        setIsExtracting(false);
+        return;
+      }
+
+      if (data.status === "success") {
+        // Set all the data from response
+        setTextContent(data.text);
+        setPostContent(data.post_content || "");
+        setHighlights(data.highlights || []);
+        setClips(data.clips || []);
+        setUploadResult(data);
+
+        console.log("🎬 Clips received:", data.clips);
+        console.log("🎯 Highlights received:", data.highlights);
+
+        if (data.clips && data.clips.length > 0) {
+          console.log(
+            `✅ Successfully generated ${data.clips.length} video clips!`
+          );
+        }
+      } else {
+        setTextContent(
+          `❌ ${data.message || data.detail || "Error extracting text."}`
+        );
+      }
+    } catch (error) {
+      console.error("Request failed:", error);
+      setTextContent("❌ Upload failed.");
+    } finally {
+      setIsExtracting(false);
+      setActivePostNum(null);
+      setPosts(1);
+    }
+  };
   const extractText = async () => {
     setIsExtracting(true);
+    setActivePostNum(posts);
     clearResults();
 
     console.log("🚀 Starting upload process...");
@@ -107,6 +183,7 @@ export default function UploadForm() {
     } else if (selectedFile) {
       form.append("fileType", uploadType);
       form.append("file", selectedFile);
+
       console.log("Sending file:", selectedFile.name);
     } else {
       const errorMsg =
@@ -115,6 +192,7 @@ export default function UploadForm() {
           : "❌ Please select a file.";
       setTextContent(errorMsg);
       setIsExtracting(false);
+      setPosts(null);
       return;
     }
 
@@ -179,6 +257,8 @@ export default function UploadForm() {
       setTextContent("❌ Upload failed.");
     } finally {
       setIsExtracting(false);
+      setActivePostNum(null);
+      setPosts(1);
     }
   };
 
@@ -233,11 +313,14 @@ export default function UploadForm() {
   const handleDownloadClip = async (clipFilename) => {
     try {
       const token = localStorage.getItem("access_token");
-      const response = await fetch(`${endpoint}/api/clips/${clipFilename}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await fetch(
+        `${endpoint}/api/clips/download/${clipFilename}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (response.ok) {
         const blob = await response.blob();
@@ -452,45 +535,90 @@ export default function UploadForm() {
                   </p>
                 </div>
               </div>
-
-              <button
-                onClick={extractText}
-                disabled={isExtracting}
-                className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
-                  isExtracting
-                    ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-                    : "bg-primary text-primary-foreground hover:bg-primary/90"
-                }`}
-              >
-                {isExtracting ? (
-                  <span className="flex items-center justify-center">
-                    <svg
-                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-current"
-                      fill="none"
-                      viewBox="0 0 24 24"
+              {uploadType === "document" ? (
+                <div className="flex space-x-2 mt-4 justify-between">
+                  {[2, 5, 10].map((num) => (
+                    <button
+                      key={num}
+                      onClick={() => {
+                        extractTextDocument(num);
+                      }}
+                      disabled={isExtracting}
+                      className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
+                        isExtracting
+                          ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                          : "bg-primary text-primary-foreground hover:bg-primary/90"
+                      }`}
                     >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    Processing...
-                  </span>
-                ) : uploadType === "video" ? (
-                  "🎬 Extract Text & Generate Clips"
-                ) : (
-                  "📝 Extract Text"
-                )}
-              </button>
+                      {isExtracting && activePostNum === num ? (
+                        <span className="flex items-center justify-center">
+                          <svg
+                            className="animate-spin -ml-1 mr-2 h-4 w-4 text-current"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                          Processing...
+                        </span>
+                      ) : (
+                        <div onClick={() => setPosts(num)}>{num} Post</div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <button
+                  onClick={extractText}
+                  disabled={isExtracting}
+                  className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
+                    isExtracting
+                      ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                      : "bg-primary text-primary-foreground hover:bg-primary/90"
+                  }`}
+                >
+                  {isExtracting ? (
+                    <span className="flex items-center justify-center">
+                      <svg
+                        className="animate-spin -ml-1 mr-2 h-4 w-4 text-current"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Processing...
+                    </span>
+                  ) : uploadType === "video" ? (
+                    "🎬 Extract Text & Generate Clips"
+                  ) : (
+                    "📝 Extract Text"
+                  )}
+                </button>
+              )}
             </div>
           )}
         </>
