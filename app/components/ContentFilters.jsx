@@ -6,14 +6,14 @@ export default function ContentFilters({
   setActiveFilter,
   searchTerm,
   setSearchTerm,
+  counts = { all: 0, video: 0, audio: 0, document: 0 },
 }) {
   const filters = [
-    { id: "all", name: "All Content", count: 23 },
-    { id: "Video", name: "Video", count: 12 },
-    { id: "Audio", name: "Audio", count: 8 },
-    { id: "Document", name: "Document", count: 3 },
+    { id: "all", name: "All Content", count: counts.all }, // dynamic
+    { id: "video", name: "Video", count: counts.video }, // dynamic
+    { id: "audio", name: "Audio", count: counts.audio }, // dynamic
+    { id: "document", name: "Document", count: counts.document }, // dynamic
   ];
-
   return (
     <div className="card bg-white mb-4 border border-gray-200 ">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">

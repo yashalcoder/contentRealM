@@ -147,7 +147,17 @@ export default function ContentLibrary({
       : contentItems.filter(
           (item) => item.type.toLowerCase() === filter.toLowerCase()
         );
-
+  // Calculate dynamic counts (yeh line 148 ke baad add karo)
+  const videoCounts = contentItems.filter(
+    (item) => item.type === "video" || item.type === "youtube"
+  ).length;
+  const audioCount = contentItems.filter(
+    (item) => item.type === "audio"
+  ).length;
+  const documentCount = contentItems.filter(
+    (item) => item.type === "document"
+  ).length;
+  const totalCount = contentItems.length;
   const filteredItems = filteredByType.filter((item) =>
     item.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -260,9 +270,16 @@ export default function ContentLibrary({
           </div>
         </div>
         <ContentFilters
+          activeFilter={filter}
           setActiveFilter={setActiveFilter}
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
+          counts={{
+            all: totalCount,
+            video: videoCounts,
+            audio: audioCount,
+            document: documentCount,
+          }}
         />
         {/* Content Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

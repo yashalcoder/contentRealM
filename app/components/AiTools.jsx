@@ -235,8 +235,8 @@ export default function AIToolsPage() {
                         <div
                           className={`max-w-sm lg:max-w-md px-4 py-3 rounded-lg ${
                             message.type === "user"
-                              ? "bg-primary text-white"
-                              : "bg-secondary text-muted-foreground"
+                              ? "bg-gray-100 text-black"
+                              : "bg-gray-100 text-black"
                           }`}
                         >
                           <p className="text-sm leading-relaxed text-black">
@@ -248,12 +248,12 @@ export default function AIToolsPage() {
                       {/* Suggestions */}
                       {message.suggestions &&
                         message.suggestions.length > 0 && (
-                          <div className="mt-3 flex flex-wrap gap-2 bg-gray-200 justify-start">
+                          <div className="mt-3 flex flex-wrap gap-2  justify-start">
                             {message.suggestions.map((suggestion, idx) => (
                               <button
                                 key={idx}
                                 onClick={() => sendMessage(suggestion)}
-                                className="text-xs px-3 py-2 bg-secondary text-muted-foreground rounded-full hover:bg-primary hover:text-white transition-colors"
+                                className="text-xs px-3 py-2 bg-black text-white rounded-full hover:bg-primary hover:text-white transition-colors"
                               >
                                 {suggestion}
                               </button>
@@ -293,12 +293,12 @@ export default function AIToolsPage() {
                     }
                     placeholder={`Ask ${selectedBot.name} anything...`}
                     disabled={loading}
-                    className="flex-1 px-4 py-3 bg-secondary border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-white disabled:opacity-50"
+                    className="flex-1 px-4 py-3 bg-white text-black border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                   />
                   <button
                     onClick={() => sendMessage()}
                     disabled={loading || !inputMessage.trim()}
-                    className="bg-primary text-black bg-gray-200 px-6 py-3 rounded-lg hover:bg-primary/80 disabled:opacity-50 transition-colors font-medium"
+                    className="bg-background text-white  px-6 py-3 rounded-lg hover:bg-primary/80  transition-colors font-medium"
                   >
                     {loading ? "..." : "Send"}
                   </button>

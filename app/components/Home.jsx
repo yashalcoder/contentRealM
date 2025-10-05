@@ -112,11 +112,11 @@ export default function HomePage() {
     },
   ];
   return (
-    <div className="min-h-screen  flex flex-col ">
+    <div className=" flex flex-col ">
       <Navbar />
       <div className="flex-1 bg-white">
         {/* Hero Section */}
-        <div className="hero-gradient py-16 bg-background">
+        <div className="hero-gradient py-16 w-full bg-background">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             {/* AI Status Indicator */}
             <div className="flex justify-center space-x-4">
@@ -176,7 +176,7 @@ export default function HomePage() {
         </div>
 
         {/* Dashboard Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-white">
+        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-white">
           {/* AI Profile Setup */}
           {/* {showProfileSetup && (
             <AIProfileSetup onComplete={handleProfileComplete} />
