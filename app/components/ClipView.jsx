@@ -318,7 +318,7 @@ export default function ViewClipsPage() {
                       key={platform}
                       className="p-4 bg-white rounded-xl border border-border"
                     >
-                      <h3 className="text-foreground font-semibold mb-3 capitalize">
+                      <h3 className="text-black font-semibold mb-3 capitalize">
                         {platform === "x" ? "X (Twitter)" : platform}
                       </h3>
 
