@@ -691,7 +691,7 @@ export default function UploadForm() {
           {clips && clips.length > 0 && (
             <Link href="/content" className="flex-1">
               <div className="btn-primary text-sm py-2 text-center">
-                View Content
+                View Clips
               </div>
             </Link>
           )}
