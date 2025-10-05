@@ -5,7 +5,12 @@ import Navbar from "./Navbar";
 import Footer from "./Footer";
 import { useParams } from "next/navigation";
 import ScheduleModal from "./SchedulePostModel";
+import { createAuthFetch } from "../utils/authHelper";
+import { useRouter } from "next/navigation";
+
 export default function ContentDetail({ params }) {
+  const router = useRouter();
+  const apiFetch = createAuthFetch(router);
   const paramData = useParams();
   console.log("in view contnet", paramData.id);
   const id = paramData.id; // assuming dynamic route [postId].jsx
@@ -47,7 +52,7 @@ export default function ContentDetail({ params }) {
       try {
         setLoading(true);
 
-        const res = await fetch(`${endpoint}/posts/${id}`);
+        const res = await apiFetch(`${endpoint}/posts/${id}`);
         const data = await res.json();
 
         if (data.status === "success") {
@@ -70,7 +75,7 @@ export default function ContentDetail({ params }) {
   async function handleSave() {
     try {
       setPostingStatus("Saving...");
-      const res = await fetch(`${endpoint}/posts/${id}`, {
+      const res = await apiFetch(`${endpoint}/posts/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, PostContent: content }),
@@ -92,59 +97,66 @@ export default function ContentDetail({ params }) {
 
   return (
     <>
-      <Navbar />
-      <div className="max-w-4xl mx-auto p-8 bg-background rounded shadow-lg text-white">
-        <h1 className="text-3xl font-bold mb-6">Edit Post</h1>
+      <div className="bg-white ">
+        <Navbar />
+        <h1 className="text-3xl text-background mt-4 text-center mx-auto font-bold mb-6">
+          Edit Post
+        </h1>
+        <p className="text-black text-center mx-auto">
+          Make changes to your post and save when you're ready.
+        </p>
 
-        <label className="block mb-2 font-semibold" htmlFor="title">
-          Title
-        </label>
-        <input
-          id="title"
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full p-2 mb-4 rounded bg-input text-white"
-        />
+        <div className="max-w-4xl mx-auto p-8 rounded my-6 shadow-lg text-black">
+          <label className="block mb-2 font-semibold" htmlFor="title">
+            Title
+          </label>
+          <input
+            id="title"
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full p-2 mb-4 rounded bg-gray-100 text-black"
+          />
 
-        <label className="block mb-2 font-semibold" htmlFor="content">
-          Content
-        </label>
-        <textarea
-          id="content"
-          rows={8}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          className="w-full p-2 mb-4 rounded bg-input text-white"
-        />
+          <label className="block mb-2 font-semibold" htmlFor="content">
+            Content
+          </label>
+          <textarea
+            id="content"
+            rows={8}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            className="w-full p-2 mb-4 rounded bg-gray-100 text-black"
+          />
 
-        <div className="flex space-x-4">
-          <button
-            onClick={handleSave}
-            className="btn-primary px-4 py-2 rounded"
-          >
-            Save Changes
-          </button>
+          <div className="flex space-x-4">
+            <button
+              onClick={handleSave}
+              className="btn-primary bg-background text-white px-4 py-2 rounded"
+            >
+              Save Changes
+            </button>
 
-          <button
-            onClick={() => setIsScheduleModalOpen(true)}
-            className="btn-primary px-4 py-2 rounded"
-          >
-            Schedule Post
-          </button>
+            <button
+              onClick={() => setIsScheduleModalOpen(true)}
+              className="btn-primary bg-background text-white px-4 py-2 rounded"
+            >
+              Schedule Post
+            </button>
+          </div>
+
+          {postingStatus && (
+            <p className="mt-4 text-sm text-yellow-300">{postingStatus}</p>
+          )}
         </div>
-
-        {postingStatus && (
-          <p className="mt-4 text-sm text-yellow-300">{postingStatus}</p>
-        )}
+        <ScheduleModal
+          isOpen={isScheduleModalOpen}
+          onClose={() => setIsScheduleModalOpen(false)}
+          content_id={id}
+          currentUser={user}
+        />
+        <Footer />
       </div>
-      <ScheduleModal
-        isOpen={isScheduleModalOpen}
-        onClose={() => setIsScheduleModalOpen(false)}
-        content_id={id}
-        currentUser={user}
-      />
-      <Footer />
     </>
   );
 }

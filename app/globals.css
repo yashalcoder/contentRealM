@@ -4,25 +4,48 @@
 
 @layer base {
   :root {
-    --background: 222 84% 5%; /* Navy blue */
+    /* Background Colors - Dark Teal */
+    --background: 200 100% 20%; /* Dark Teal #0A3D4D */
     --foreground: 0 0% 100%; /* White */
-    --card: 215 28% 17%; /* Lighter navy for cards */
-    --card-foreground: 0 0% 100%; /* White */
-    --popover: 215 28% 17%;
+    --navbar: 200 100% 12%; /* Very Dark Blue - almost black */
+    --navbar-foreground: 0 0% 100%; /* White text */
+    
+    /* Card Colors - Slightly Lighter Teal */
+    --card: 192 45% 20%; /* Card background */
+    --card-foreground: 0 0% 100%; /* White text */
+
+    /* Popover Colors */
+    --popover: 192 45% 18%;
     --popover-foreground: 0 0% 100%;
-    --primary: 45 93% 58%; /* Gold color */
-    --primary-foreground: 222 84% 5%; /* Navy text on gold */
-    --secondary: 215 28% 17%; /* Navy secondary */
-    --secondary-foreground: 45 93% 58%; /* Gold text */
-    --muted: 215 28% 17%;
-    --muted-foreground: 0 0% 70%;
-    --accent: 45 93% 58%; /* Gold accent */
-    --accent-foreground: 222 84% 5%; /* Navy on gold */
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 215 28% 25%; /* Subtle border */
-    --input: 215 28% 17%;
-    --ring: 45 93% 58%; /* Gold focus ring */
+
+    /* Primary Colors - Golden Yellow */
+    --primary: 38 92% 55%; /* Golden Yellow #FDB81E */
+    --primary-foreground: 192 100% 10%; /* Dark text on yellow */
+
+    /* Secondary Colors - Medium Teal */
+    --secondary: 192 55% 25%; /* Medium Teal #1A5563 */
+    --secondary-foreground: 0 0% 100%; /* White text */
+
+    /* Muted Colors - Subtle Gray/Teal */
+    --muted: 192 20% 35%; /* Muted Teal */
+    --muted-foreground: 192 10% 70%; /* Light Gray text */
+
+    /* Accent Colors - Light Cyan */
+    --accent: 187 92% 69%; /* Light Cyan #67E8F9 */
+    --accent-foreground: 192 100% 10%; /* Dark text on cyan */
+
+    /* Destructive Colors */
+    --destructive: 0 84% 60%; /* Red */
+    --destructive-foreground: 0 0% 100%; /* White */
+
+    /* Border Colors - Medium Teal Border */
+    --border: 192 30% 30%; /* Border color */
+    --input: 192 30% 30%; /* Input border */
+
+    /* Focus Ring - Golden Yellow */
+    --ring: 38 92% 55%; /* Gold focus ring */
+
+    /* Border Radius */
     --radius: 0.75rem;
   }
 }

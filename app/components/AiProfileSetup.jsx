@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
-
+import { createApiFetch } from "./ApiFetch";
+import { useRouter } from "next/navigation";
 const AIProfileSetup = ({ onComplete }) => {
+  const router = useRouter();
+  const apiFetch = createApiFetch();
   const [profile, setProfile] = useState({
     industry: "",
     specialization: "",
@@ -90,7 +93,7 @@ const AIProfileSetup = ({ onComplete }) => {
       if (!token) return;
 
       // ✅ FIX: Correct API endpoint
-      const response = await fetch(`${endpoint}/api/ai/profile-status`, {
+      const response = await apiFetch(`${endpoint}/api/ai/profile-status`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -112,7 +115,7 @@ const AIProfileSetup = ({ onComplete }) => {
 
     try {
       const token = localStorage.getItem("access_token");
-      const response = await fetch(`${endpoint}/api/ai/setup-profile`, {
+      const response = await apiFetch(`${endpoint}/api/ai/setup-profile`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -7,8 +7,11 @@ import {
   Calendar,
   Trash2,
 } from "lucide-react";
-
+import { useRouter } from "next/navigation";
+import { createApiFetch } from "./ApiFetch";
 function ContentCalendar() {
+  const router = useRouter();
+  const apiFetch = createApiFetch();
   const endpoint =
     process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
 
@@ -60,7 +63,7 @@ function ContentCalendar() {
 
     const fetchPosts = async () => {
       try {
-        const res = await fetch(
+        const res = await apiFetch(
           `${endpoint}/scheduled-posts?user_id=${userId}`
         );
         const data = await res.json();
@@ -131,7 +134,7 @@ function ContentCalendar() {
   // Cancel scheduled post
   const cancelPost = async (postId) => {
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `${endpoint}/scheduled-posts/${postId}?user_id=${userId}`,
         {
           method: "DELETE",

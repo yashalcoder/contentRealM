@@ -1,7 +1,7 @@
 export default function Footer() {
   return (
-    <footer className="bg-background border-t border-border mt-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <footer className="bg-background border-t p-4 border-border mt-auto">
+      {/* <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center space-x-2 mb-4">
@@ -88,15 +88,14 @@ export default function Footer() {
               </li>
             </ul>
           </div>
-        </div>
+        </div> */}
 
-        <div className="border-t border-border pt-8 mt-8">
-          <p className="text-center text-muted-foreground text-sm">
-            © 2024 ContentRealm™. All rights reserved. Part of the Realm Tools
-            Suite.
-          </p>
-        </div>
-      </div>
+      <p className="text-center text-white text-lg text-sm">
+        © 2025 ContentRealm™. All rights reserved. Part of the Realm Tools
+        Suite.
+      </p>
+
+      {/* </div> */}
     </footer>
   );
 }

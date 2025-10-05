@@ -3,7 +3,8 @@ import React, { useState, useEffect } from "react";
 import { AiOutlineClose } from "react-icons/ai";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-
+import { useRouter } from "next/navigation";
+import { createApiFetch } from "./ApiFetch";
 export default function ScheduleModal({
   isOpen,
   onClose,
@@ -11,6 +12,8 @@ export default function ScheduleModal({
   content_id,
   currentUser,
 }) {
+  const router = useRouter();
+  const apiFetch = createApiFetch();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedPlatforms, setSelectedPlatforms] = useState([]);
   const [connectedPlatforms, setConnectedPlatforms] = useState([]);
@@ -36,7 +39,7 @@ export default function ScheduleModal({
   const fetchConnectedPlatforms = async () => {
     try {
       setLoading(true);
-      const response = await fetch(
+      const response = await apiFetch(
         `${endpoint}/getConnectedPlatforms?user_id=${currentUser.id}`,
         {
           headers: {
@@ -68,7 +71,7 @@ export default function ScheduleModal({
 
     try {
       setLoading(true);
-      const response = await fetch(
+      const response = await apiFetch(
         `${endpoint}/connect-platform/${platform}?user_id=${currentUser.id}`,
         {
           headers: {
@@ -138,7 +141,7 @@ export default function ScheduleModal({
         scheduled_at: selectedDate.toISOString(),
       };
 
-      const response = await fetch(`${endpoint}/schedule-post`, {
+      const response = await apiFetch(`${endpoint}/schedule-post`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -169,7 +172,7 @@ export default function ScheduleModal({
   const handleDisconnectPlatform = async (platformId) => {
     try {
       setLoading(true);
-      const response = await fetch(`${endpoint}/disconnect-platform`, {
+      const response = await apiFetch(`${endpoint}/disconnect-platform`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,

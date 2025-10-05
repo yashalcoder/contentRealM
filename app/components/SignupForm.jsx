@@ -4,7 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation"; // Import useRouter
 import Swal from "sweetalert2";
 import { Eye, EyeOff } from "lucide-react";
+import { createApiFetch } from "./ApiFetch";
+
 export default function SignupForm() {
+  const router = useRouter();
+  const apiFetch = createApiFetch(router);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -16,7 +20,7 @@ export default function SignupForm() {
   const [show, setShow] = useState(false);
   const [show1, setShow1] = useState(false);
   const [loading, setLoading] = useState(false);
-  const router = useRouter(); // Initialize useRouter
+
   const apiEndpoint = process.env.NEXT_PUBLIC_API_ENDPOINT;
   const handleSubmit = async (e) => {
     setLoading(true);
@@ -35,7 +39,7 @@ export default function SignupForm() {
     }
 
     try {
-      const res = await fetch(`${apiEndpoint}/auth/signup`, {
+      const res = await apiFetch(`${apiEndpoint}/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -106,7 +110,7 @@ export default function SignupForm() {
   };
 
   return (
-    <div className="max-w-md w-full space-y-8 m-auto top-10">
+    <div className="max-w-md w-full space-y-8 m-auto top-10 ">
       <div className="text-center">
         <div className="flex items-center justify-center space-x-2 mt-7 mb-6">
           <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center">
@@ -122,13 +126,13 @@ export default function SignupForm() {
           content empires
         </p>
       </div>
-      <div className="bg-card py-8 px-6 shadow-xl rounded-xl border border-border">
+      <div className="bg-card bg-white py-8 px-6 shadow-xl rounded-xl border border-border">
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label
                 htmlFor="firstName"
-                className="block text-sm font-medium text-muted-foreground mb-2"
+                className="block  text-sm font-medium text-muted-foreground mb-2"
               >
                 First Name
               </label>
@@ -139,7 +143,7 @@ export default function SignupForm() {
                 required
                 value={formData.firstName}
                 onChange={handleChange}
-                className="w-full px-3 py-3 bg-input border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-foreground placeholder-muted-foreground"
+                className="w-full px-3 py-3 text-black bg-white border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring placeholder-muted-foreground"
                 placeholder="John"
               />
             </div>
@@ -157,7 +161,7 @@ export default function SignupForm() {
                 required
                 value={formData.lastName}
                 onChange={handleChange}
-                className="w-full px-3 py-3 bg-input border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-foreground placeholder-muted-foreground"
+                className="w-full px-3 py-3 text-black bg-white border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring placeholder-muted-foreground"
                 placeholder="Doe"
               />
             </div>
@@ -175,7 +179,7 @@ export default function SignupForm() {
               name="userType"
               value={formData.userType}
               onChange={handleChange}
-              className="w-full px-3 py-3 bg-input border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-foreground"
+              className="w-full px-3 py-3 text-black bg-white border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring placeholder-muted-foreground"
             >
               <option value="speaker">Speaker</option>
               <option value="coach">Coach</option>
@@ -199,7 +203,7 @@ export default function SignupForm() {
               required
               value={formData.email}
               onChange={handleChange}
-              className="w-full px-3 py-3 bg-input border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-foreground placeholder-muted-foreground"
+              className="w-full px-3 py-3 text-black bg-white border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring placeholder-muted-foreground"
               placeholder="john@example.com"
             />
           </div>
@@ -230,14 +234,18 @@ export default function SignupForm() {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="Create a strong password"
-                className="w-full px-3 py-3 pr-10 bg-input border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-foreground placeholder-muted-foreground"
+                className="w-full px-3 py-3 text-black bg-white border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring placeholder-muted-foreground"
               />
               <button
                 type="button"
                 onClick={() => setShow1(!show1)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
-                {show1 ? <Eye size={20} /> : <EyeOff size={20} />}
+                {show1 ? (
+                  <Eye className="text-black" size={20} />
+                ) : (
+                  <EyeOff className="text-black" size={20} />
+                )}
               </button>
             </div>
           </div>
@@ -268,14 +276,18 @@ export default function SignupForm() {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 placeholder="Confirm your password"
-                className="w-full px-3 py-3 pr-10 bg-input border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-foreground placeholder-muted-foreground"
+                className="w-full px-3 py-3 text-black bg-white border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring placeholder-muted-foreground"
               />
               <button
                 type="button"
                 onClick={() => setShow(!show)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
-                {show ? <Eye size={20} /> : <EyeOff size={20} />}
+                {show ? (
+                  <Eye className="text-black" size={20} />
+                ) : (
+                  <EyeOff className="text-black" size={20} />
+                )}
               </button>
             </div>
           </div>

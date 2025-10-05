@@ -3,8 +3,11 @@
 import { useState } from "react";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
-
+import { createApiFetch } from "./ApiFetch";
+import { useRouter } from "next/navigation";
 export default function AIToolsPage() {
+  const router = useRouter();
+  const apiFecth = createApiFetch();
   const [selectedBot, setSelectedBot] = useState(null);
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
@@ -102,7 +105,7 @@ export default function AIToolsPage() {
       }
 
       // ✅ FIX: Correct API endpoint and add auth header
-      const response = await fetch(`${endpoint}/api/ai/chat`, {
+      const response = await apiFecth(`${endpoint}/api/ai/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -167,7 +170,7 @@ export default function AIToolsPage() {
   // ✅ REST OF THE COMPONENT REMAINS THE SAME...
   if (selectedBot) {
     return (
-      <div className="min-h-screen flex flex-col bg-background">
+      <div className="min-h-screen flex flex-col bg-white">
         <Navbar />
         <div className="flex-1 max-w-6xl mx-auto px-4 py-8">
           {/* Header */}
@@ -198,16 +201,16 @@ export default function AIToolsPage() {
           {/* Chat Interface */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             {/* Features Sidebar */}
-            <div className="lg:col-span-1">
-              <div className="card sticky top-8">
-                <h3 className="font-semibold text-white mb-4">Key Features</h3>
+            <div className="lg:col-span-1 ">
+              <div className="card bg-white text-black sticky top-8">
+                <h3 className="font-semibold text-black mb-4">Key Features</h3>
                 <div className="space-y-2">
                   {selectedBot.features.map((feature, index) => (
                     <div
                       key={index}
-                      className="flex items-center space-x-2 text-sm text-muted-foreground"
+                      className="flex items-center space-x-2 text-sm text-black"
                     >
-                      <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                      <div className="w-1.5 h-1.5 bg-primary rounded-full text-black"></div>
                       <span>{feature}</span>
                     </div>
                   ))}
@@ -216,10 +219,10 @@ export default function AIToolsPage() {
             </div>
 
             {/* Chat Main */}
-            <div className="lg:col-span-3">
-              <div className="card">
+            <div className="lg:col-span-3 ">
+              <div className="card bg-white text-black">
                 {/* Messages */}
-                <div className="space-y-4 max-h-96 overflow-y-auto mb-6">
+                <div className="space-y-4 max-h-96 overflow-y-auto mb-6 ">
                   {messages.map((message, index) => (
                     <div key={index}>
                       <div
@@ -236,7 +239,7 @@ export default function AIToolsPage() {
                               : "bg-secondary text-muted-foreground"
                           }`}
                         >
-                          <p className="text-sm leading-relaxed">
+                          <p className="text-sm leading-relaxed text-black">
                             {message.content}
                           </p>
                         </div>
@@ -245,7 +248,7 @@ export default function AIToolsPage() {
                       {/* Suggestions */}
                       {message.suggestions &&
                         message.suggestions.length > 0 && (
-                          <div className="mt-3 flex flex-wrap gap-2 justify-start">
+                          <div className="mt-3 flex flex-wrap gap-2 bg-gray-200 justify-start">
                             {message.suggestions.map((suggestion, idx) => (
                               <button
                                 key={idx}
@@ -295,7 +298,7 @@ export default function AIToolsPage() {
                   <button
                     onClick={() => sendMessage()}
                     disabled={loading || !inputMessage.trim()}
-                    className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/80 disabled:opacity-50 transition-colors font-medium"
+                    className="bg-primary text-black bg-gray-200 px-6 py-3 rounded-lg hover:bg-primary/80 disabled:opacity-50 transition-colors font-medium"
                   >
                     {loading ? "..." : "Send"}
                   </button>
@@ -310,7 +313,7 @@ export default function AIToolsPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-white">
       <Navbar />
       <div className="flex-1">
         {/* Hero Section */}
@@ -336,14 +339,14 @@ export default function AIToolsPage() {
               <div
                 key={bot.id}
                 onClick={() => selectBot(bot)}
-                className="card hover:border-primary transition-all duration-300 cursor-pointer group"
+                className="card border border-gray-200  shadow-lg hover:scale-105 transition-all duration-300 bg-white  transition-all duration-300 cursor-pointer  group"
               >
                 <div
                   className={`w-16 h-16 bg-gradient-to-br ${bot.gradient} rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform`}
                 >
                   {bot.icon}
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">
+                <h3 className="text-xl font-bold mb-2 text-black">
                   {bot.name}
                 </h3>
                 <p className="text-muted-foreground mb-4">{bot.description}</p>
@@ -360,7 +363,7 @@ export default function AIToolsPage() {
                   ))}
                 </div>
 
-                <button className="w-full bg-primary text-white py-2 rounded-lg hover:bg-primary/80 transition-colors font-medium">
+                <button className="w-full bg-background text-white py-2 rounded-lg hover:bg-primary/80 transition-colors font-medium">
                   Start Chatting →
                 </button>
               </div>

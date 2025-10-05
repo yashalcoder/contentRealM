@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import {
   FaFileAlt,
   FaVideo,
@@ -11,28 +11,79 @@ import {
 } from "react-icons/fa";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-
-export default function ContentLibrary({ userId, filter, searchTerm }) {
+import { createApiFetch } from "./ApiFetch";
+import ContentFilters from "./ContentFilters";
+export default function ContentLibrary({
+  userId,
+  filter,
+  searchTerm,
+  setActiveFilter,
+  setSearchTerm,
+}) {
+  const router = useRouter();
+  const apiFetch = createApiFetch();
   const endpoint = process.env.NEXT_PUBLIC_API_ENDPOINT;
   const [contentItems, setContentItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [expandedItems, setExpandedItems] = useState(new Set());
-  const [contentClipsData, setContentClipsData] = useState({});
-  const [loadingClips, setLoadingClips] = useState({});
-  const [previewClip, setPreviewClip] = useState(null); // clip object being previewed
-  const router = useRouter();
+
+  // Track if component is mounted
+  const isMountedRef = useRef(true);
+
+  // Session expiry handler
+  const handleSessionExpiry = useCallback(() => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    alert("Session expired. Please login again.");
+    router.push("/login");
+  }, [router]);
+
+  // Enhanced fetch with session handling
+  const fetchWithAuth = async (url, options = {}) => {
+    try {
+      const token = localStorage.getItem("access_token");
+
+      if (!token) {
+        handleSessionExpiry();
+        return null;
+      }
+
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          ...options.headers,
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      // Handle 401 Unauthorized (session expired)
+      if (response.status === 401) {
+        handleSessionExpiry();
+        return null;
+      }
+
+      return response;
+    } catch (error) {
+      console.error("Fetch error:", error);
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   useEffect(() => {
     async function fetchPosts() {
       try {
         setLoading(true);
-        const token = localStorage.getItem("access_token");
+        const res = await fetchWithAuth(`${endpoint}/my-posts/${userId}`);
 
-        const res = await fetch(`${endpoint}/my-posts/${userId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        if (!res) return; // Session expired
+
         const data = await res.json();
 
         if (data.status === "success") {
@@ -52,180 +103,40 @@ export default function ContentLibrary({ userId, filter, searchTerm }) {
             hasVideo: post.FileType === "video" || post.FileType === "youtube",
           }));
 
-          setContentItems(mappedContent);
-
-          // Fetch clips for video content items
-          await fetchClipsForAllVideos(mappedContent);
+          if (isMountedRef.current) {
+            setContentItems(mappedContent);
+          }
         } else {
           setError(data.message || "Failed to fetch posts");
         }
       } catch (err) {
-        setError(err.message);
+        if (isMountedRef.current) {
+          setError(err.message);
+        }
       } finally {
-        setLoading(false);
+        if (isMountedRef.current) {
+          setLoading(false);
+        }
       }
     }
 
     if (userId) {
       fetchPosts();
     }
-  }, [userId, endpoint]);
-
-  const fetchClipsForAllVideos = async (contentList) => {
-    try {
-      const token = localStorage.getItem("access_token");
-      const newContentClipsData = {};
-
-      for (const content of contentList) {
-        if (content.hasVideo) {
-          try {
-            setLoadingClips((prev) => ({ ...prev, [content.id]: true }));
-
-            // Updated API endpoint to match backend
-            const clipsRes = await fetch(
-              `${endpoint}/api/clips/content/${content.id}/clips`,
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              }
-            );
-
-            if (clipsRes.ok) {
-              const clipsData = await clipsRes.json();
-              console.log(`Clips for content ${content.id}:`, clipsData);
-              newContentClipsData[content.id] = clipsData;
-            } else {
-              console.log(
-                `No clips found for content ${content.id}:`,
-                clipsRes.status
-              );
-              newContentClipsData[content.id] = { clips: [] };
-            }
-          } catch (error) {
-            console.error(
-              `Error fetching clips for content ${content.id}:`,
-              error
-            );
-            newContentClipsData[content.id] = { clips: [] };
-          } finally {
-            setLoadingClips((prev) => ({ ...prev, [content.id]: false }));
-          }
-        }
-      }
-
-      setContentClipsData(newContentClipsData);
-    } catch (error) {
-      console.error("Error fetching clips:", error);
-    }
-  };
-
-  const toggleExpanded = (itemId) => {
-    const newExpanded = new Set(expandedItems);
-    if (newExpanded.has(itemId)) {
-      newExpanded.delete(itemId);
-    } else {
-      newExpanded.add(itemId);
-    }
-    setExpandedItems(newExpanded);
-  };
-
-  const handleDownloadClip = async (clipFilename) => {
-    try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch(
-        `${endpoint}/api/clips/download/${clipFilename}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = clipFilename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-      } else {
-        console.error("Download failed:", response.status, response.statusText);
-        alert("Failed to download clip");
-      }
-    } catch (error) {
-      console.error("Error downloading clip:", error);
-      alert("Error downloading clip");
-    }
-  };
-  const VideoPreview = ({ clip }) => (
-    <video controls width={600}>
-      <source
-        src={`${endpoint}/clips/${clip.clip_filename}`}
-        type="video/mp4"
-      />
-      {clip.captions_filename && (
-        <track
-          label="English"
-          kind="subtitles"
-          src={`${endpoint}/clips/${clip.captions_filename}`}
-          default
-        />
-      )}
-      Your browser does not support the video tag.
-    </video>
-  );
-
-  // Enhanced function to properly enable captions
-  const handleVideoLoad = (videoElement) => {
-    if (!videoElement) return;
-
-    console.log("Video loaded, checking for text tracks...");
-
-    // Wait a moment for tracks to load
-    setTimeout(() => {
-      const textTracks = videoElement.textTracks;
-      console.log(`Found ${textTracks.length} text tracks`);
-
-      if (textTracks.length > 0) {
-        const track = textTracks[0];
-        track.mode = "showing";
-        console.log(`Caption track mode set to: ${track.mode}`);
-        console.log(`Track kind: ${track.kind}, language: ${track.language}`);
-
-        // Add event listeners for track events
-        track.addEventListener("load", () => {
-          console.log("Track loaded successfully");
-        });
-
-        track.addEventListener("error", (e) => {
-          console.error("Track error:", e);
-        });
-      } else {
-        console.log("No text tracks found");
-      }
-    }, 500); // Small delay to ensure tracks are loaded
-  };
-
-  const getClipsForContent = (contentId) => {
-    return contentClipsData[contentId]?.clips || [];
-  };
+  }, [userId]); // Removed endpoint dependency to prevent re-fetching
 
   if (loading)
     return (
       <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <span className="ml-3 text-muted-foreground">Loading posts...</span>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+        <span className="ml-3 text-gray-600">Loading posts...</span>
       </div>
     );
 
   if (error)
     return (
-      <div className="p-4 bg-red-900/30 border border-red-600/30 rounded-lg">
-        <p className="text-red-300">Error: {error}</p>
+      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <p className="text-red-600">Error: {error}</p>
       </div>
     );
 
@@ -241,419 +152,287 @@ export default function ContentLibrary({ userId, filter, searchTerm }) {
     item.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  return (
-    <div className="mt-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredItems.map((item) => {
-          const itemClips = getClipsForContent(item.id);
-          const isLoadingClips = loadingClips[item.id];
+  // Calculate stats
+  const totalVideos = contentItems.filter((item) => item.hasVideo).length;
+  const totalClips = contentItems.length;
+  const storageUsed = (contentItems.length * 2.5).toFixed(2);
 
-          return (
-            <div
-              key={item.id}
-              className="card hover:border-primary transition-colors"
-            >
-              <div className="flex items-start space-x-4">
-                <div className="w-16 h-16 rounded-lg object-cover bg-input text-white flex items-center justify-center text-2xl">
-                  {item.type === "video" || item.type === "youtube" ? (
-                    <FaVideo />
-                  ) : item.type === "audio" ? (
-                    <FaHeadphones />
-                  ) : (
-                    <FaFileAlt />
-                  )}
+  return (
+    <div className=" min-h-screen p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800">
+              Content Library
+            </h1>
+            <p className="text-gray-600 text-sm mt-1">
+              Manage all your uploaded videos and clips
+            </p>
+          </div>
+          <Link href="/upload">
+            <button className="flex items-center gap-2 px-5 py-2.5 bg-background text-white font-medium rounded-lg hover:bg-primary transition-colors">
+              <span>↑</span>
+              <span>Upload New</span>
+            </button>
+          </Link>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+          {/* Total Videos */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Total Videos</p>
+                <p className="text-4xl font-bold text-gray-800">
+                  {totalVideos}
+                </p>
+              </div>
+              <div className="w-14 h-14 bg-blue-50 rounded-lg flex items-center justify-center">
+                <svg
+                  className="w-7 h-7 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          {/* Total Clips */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Total Clips</p>
+                <p className="text-4xl font-bold text-gray-800">{totalClips}</p>
+              </div>
+              <div className="w-14 h-14 bg-yellow-50 rounded-lg flex items-center justify-center">
+                <svg
+                  className="w-7 h-7 text-yellow-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          {/* Storage Used */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Storage Used</p>
+                <p className="text-4xl font-bold text-gray-800">
+                  {storageUsed} MB
+                </p>
+              </div>
+              <div className="w-14 h-14 bg-teal-50 rounded-lg flex items-center justify-center">
+                <svg
+                  className="w-7 h-7 text-teal-700"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <ContentFilters
+          setActiveFilter={setActiveFilter}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+        />
+        {/* Content Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredItems.map((item) => {
+            return (
+              <div
+                key={item.id}
+                className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-lg hover:border-teal-600 transition-all"
+              >
+                {/* Card Header */}
+                <div className="flex items-start space-x-4">
+                  <div className="w-16 h-16 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center text-2xl">
+                    {item.type === "video" || item.type === "youtube" ? (
+                      <FaVideo />
+                    ) : item.type === "audio" ? (
+                      <FaHeadphones />
+                    ) : (
+                      <FaFileAlt />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-gray-800 truncate">
+                      {item.title}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {item.type} • {item.date}
+                    </p>
+                    <div className="mt-2 flex items-center space-x-2">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                        {item.status}
+                      </span>
+                      {item.hasVideo && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700">
+                          🎬 Video Content
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-white truncate">
-                    {item.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {item.type} • {item.date}
+
+                {/* Content Preview */}
+                <div className="mt-4">
+                  <p className="text-sm text-gray-600 mb-2">
+                    Generated Content:
                   </p>
-                  <div className="mt-2 flex items-center space-x-2">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-900/30 text-green-300">
-                      {item.status}
-                    </span>
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <p className="text-gray-700 text-sm line-clamp-3">
+                      {item.content || "No content preview available"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Formats/Outputs */}
+                <div className="mt-4">
+                  <p className="text-sm text-gray-600 mb-2">
+                    {item.outputs} content pieces generated:
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {item.formats.map((format, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-gray-100 text-gray-700 border border-gray-200"
+                      >
+                        {format}
+                      </span>
+                    ))}
                     {item.hasVideo && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-purple-900/30 text-purple-300">
-                        🎬 Video Content
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-purple-100 text-purple-700 border border-purple-200">
+                        🎬 Clips Available
                       </span>
                     )}
                   </div>
                 </div>
-              </div>
 
-              {/* Content Preview */}
-              <div className="mt-4">
-                <p className="text-sm text-muted-foreground mb-2">
-                  Generated Content:
-                </p>
-                <div className="bg-secondary/30 p-3 rounded-md">
-                  <p className="text-white text-sm line-clamp-3">
-                    {item.content || "No content preview available"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Formats/Outputs */}
-              <div className="mt-4">
-                <p className="text-sm text-muted-foreground mb-2">
-                  {item.outputs} content pieces generated:
-                </p>
-                <div className="flex flex-wrap gap-1">
-                  {item.formats.map((format, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-secondary text-muted-foreground border border-border"
-                    >
-                      {format}
-                    </span>
-                  ))}
-                  {item.hasVideo && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-purple-900/30 text-purple-300 border border-purple-600/30">
-                      {isLoadingClips
-                        ? "🔄 Loading clips..."
-                        : `🎬 ${itemClips.length} Clips`}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="mt-4 flex space-x-2">
-                <Link href={`/view-content/${item.id}`}>
-                  <div className="flex-1 btn-primary text-sm py-2 text-center">
-                    View Content
-                  </div>
-                </Link>
-
-                {item.hasVideo && (
-                  <Link href={`/view-clips/${item.id}`}>
-                    <button
-                      // onClick={() => toggleExpanded(item.id)}
-
-                      className="px-3 py-2 text-purple-400 hover:text-purple-300 border border-purple-600/30 rounded-lg hover:border-purple-500/50 bg-purple-900/20"
-                      title="View clips"
-                      disabled={isLoadingClips}
-                    >
-                      {isLoadingClips ? "🔄" : "🎬"}
-                    </button>
+                {/* Action Buttons */}
+                <div className="mt-4 flex space-x-2">
+                  <Link href={`/view-content/${item.id}`} className="flex-1">
+                    <div className="bg-background text-white text-sm py-2 text-center rounded-lg hover:bg-primary transition-colors font-medium">
+                      View Content
+                    </div>
                   </Link>
-                )}
 
-                <button className="px-3 py-2 text-muted-foreground hover:text-white border border-border rounded-lg hover:border-ring">
-                  ⋯
-                </button>
-              </div>
-
-              {/* Expanded Clips Section */}
-              {expandedItems.has(item.id) && item.hasVideo && (
-                <div className="mt-4 p-4 bg-purple-900/20 border border-purple-600/30 rounded-lg">
-                  <h4 className="text-purple-300 font-medium mb-3 flex items-center space-x-2">
-                    <span>🎬</span>
-                    <span>Video Clips</span>
-                  </h4>
-
-                  {isLoadingClips ? (
-                    <div className="text-center py-6">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-400 mx-auto mb-2"></div>
-                      <p className="text-purple-300/70 text-sm">
-                        Loading clips...
-                      </p>
-                    </div>
-                  ) : itemClips.length > 0 ? (
-                    <div className="space-y-4">
-                      {itemClips.slice(0, 3).map((clip, clipIndex) => (
-                        <div
-                          key={clipIndex}
-                          className="bg-purple-900/30 p-4 rounded-md"
-                        >
-                          {/* Clip Header */}
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex-1">
-                              <p className="text-purple-100 text-sm font-medium">
-                                {clip.reason ||
-                                  clip.title ||
-                                  `Clip ${clipIndex + 1}`}
-                              </p>
-                              <p className="text-purple-300 text-xs">
-                                {clip.start} - {clip.end} • Duration:{" "}
-                                {clip.duration}s
-                              </p>
-                              {clip.file_size && (
-                                <p className="text-purple-300 text-xs">
-                                  {(clip.file_size / 1024 / 1024).toFixed(2)} MB
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Video Preview with Captions */}
-                          {clip.clip_filename && (
-                            <div className="mb-3">
-                              <video
-                                controls
-                                className="w-full h-40 object-cover rounded bg-black"
-                                src={`${endpoint}/api/clips/serve/${clip.clip_filename}`}
-                                preload="metadata"
-                                onLoadedMetadata={(e) =>
-                                  handleVideoLoad(e.target)
-                                }
-                                crossOrigin="anonymous"
-                              >
-                                {clip.captions_filename && (
-                                  <track
-                                    key={`${clip.id}-${clip.captions_filename}`} // ✅ force unique track
-                                    src={`${endpoint}/api/clips/serve/${clip.captions_filename}`}
-                                    kind="subtitles"
-                                    srcLang="en"
-                                    label="English"
-                                    default
-                                  />
-                                )}
-                              </video>
-
-                              {/* Caption Status Indicator */}
-                              {clip.captions_filename && (
-                                <div className="mt-1 flex items-center text-xs text-purple-300/70">
-                                  <FaClosedCaptioning className="mr-1" />
-                                  <span>
-                                    Captions available - enable in video player
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Thumbnail Preview (smaller, secondary) */}
-                          {clip.thumbnail_filename && (
-                            <div className="mb-3">
-                              <p className="text-xs text-purple-300/70 mb-1">
-                                Thumbnail:
-                              </p>
-                              <img
-                                src={`${endpoint}/api/clips/serve/${clip.thumbnail_filename}`}
-                                alt={`Thumbnail for ${clip.reason || "Clip"}`}
-                                className="w-20 h-12 object-cover rounded bg-gray-800 border border-purple-600/30"
-                                onError={(e) => {
-                                  e.target.style.display = "none";
-                                }}
-                              />
-                            </div>
-                          )}
-
-                          {/* Action Buttons */}
-                          <div className="flex flex-wrap gap-2">
-                            {/* Download Video */}
-                            {clip.clip_filename && (
-                              <button
-                                onClick={() =>
-                                  handleDownloadClip(clip.clip_filename)
-                                }
-                                className="flex-1 min-w-0 p-2 bg-purple-600 text-white rounded text-xs hover:bg-purple-700 flex items-center justify-center space-x-1"
-                                title="Download video clip"
-                              >
-                                <FaDownload size={10} />
-                                <span>Download MP4</span>
-                              </button>
-                            )}
-
-                            {/* Download Thumbnail */}
-                            {clip.thumbnail_filename && (
-                              <button
-                                onClick={() =>
-                                  handleDownloadClip(clip.thumbnail_filename)
-                                }
-                                className="flex-1 min-w-0 p-2 bg-green-600 text-white rounded text-xs hover:bg-green-700 flex items-center justify-center space-x-1"
-                                title="Download thumbnail"
-                              >
-                                <FaImage size={10} />
-                                <span>Thumbnail</span>
-                              </button>
-                            )}
-
-                            {/* Download Captions (separate file if needed) */}
-                            {clip.captions_filename && (
-                              <button
-                                onClick={() =>
-                                  handleDownloadClip(clip.captions_filename)
-                                }
-                                className="flex-1 min-w-0 p-2 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 flex items-center justify-center space-x-1"
-                                title="Download captions file"
-                              >
-                                <FaClosedCaptioning size={10} />
-                                <span>SRT File</span>
-                              </button>
-                            )}
-
-                            {/* Preview in New Tab */}
-                            {clip.clip_filename && (
-                              <button
-                                onClick={() => setPreviewClip(clip)}
-                                className="flex-1 min-w-0 p-2 bg-orange-600 text-white rounded text-xs hover:bg-orange-700 flex items-center justify-center space-x-1"
-                                title="Preview video"
-                              >
-                                <FaPlay size={10} />
-                                <span>Preview</span>
-                              </button>
-                            )}
-                          </div>
-
-                          {/* Assets Info */}
-                          <div className="mt-2 flex justify-center space-x-4 text-xs text-purple-300/70">
-                            {clip.clip_filename && (
-                              <span className="flex items-center space-x-1">
-                                <FaVideo size={8} />
-                                <span>MP4</span>
-                              </span>
-                            )}
-                            {clip.captions_filename && (
-                              <span className="flex items-center space-x-1">
-                                <FaClosedCaptioning size={8} />
-                                <span>Captions</span>
-                              </span>
-                            )}
-                            {clip.thumbnail_filename && (
-                              <span className="flex items-center space-x-1">
-                                <FaImage size={8} />
-                                <span>Thumbnail</span>
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Debug info for development */}
-                          {process.env.NODE_ENV === "development" && (
-                            <div className="mt-2 p-2 bg-gray-900/50 rounded text-xs text-gray-400">
-                              <p>Clip ID: {clip.id}</p>
-                              <p>Exists: {clip.exists ? "Yes" : "No"}</p>
-                              {clip.clip && <p>Path: {clip.clip}</p>}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-
-                      {itemClips.length > 3 && (
-                        <div className="text-center">
-                          <Link href={`/view-content/${item.id}`}>
-                            <span className="text-purple-400 hover:text-purple-300 text-sm">
-                              View all {itemClips.length} clips →
-                            </span>
-                          </Link>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-center py-6">
-                      <div className="text-purple-300/50 mb-2 text-2xl">🎬</div>
-                      <p className="text-purple-300/70 text-sm">
-                        No clips available
-                      </p>
-                      <p className="text-purple-400/50 text-xs">
-                        Clips are generated during video processing
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-              {/* Video Preview Modal */}
-              {previewClip && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur flex items-center justify-center z-50">
-                  <div className="bg-gray-900 rounded-lg p-4 max-w-3xl w-full relative">
-                    <button
-                      className="absolute top-2 right-2 text-white text-xl font-bold"
-                      onClick={() => setPreviewClip(null)}
-                    >
-                      ×
-                    </button>
-
-                    {/* In your preview modal */}
-                    <video
-                      controls
-                      autoPlay
-                      className="w-full h-auto bg-red-500 text-black"
-                      onLoadedData={(e) => handleVideoLoad(e.target)}
-                      onLoadedMetadata={(e) => handleVideoLoad(e.target)} // Additional trigger
-                      crossOrigin="anonymous"
-                      onError={(e) => console.error("Video error:", e)}
-                    >
-                      <source
-                        src={`${endpoint}/api/clips/serve/${previewClip.clip_filename}`}
-                        type="video/mp4"
-                      />
-                      {previewClip.captions_filename && (
-                        <track
-                          src={`${endpoint}/api/clips/serve/${previewClip.captions_filename}`}
-                          kind="subtitles"
-                          srcLang="en"
-                          label="English"
-                          default
-                          onLoad={() => console.log("VTT track loaded")}
-                          onError={(e) => console.error("VTT track error:", e)}
-                        />
-                      )}
-                      <div className="bg-white text-black">
-                        {previewClip.captions_filename}
-                      </div>
-                      Your browser does not support the video tag.
-                    </video>
-                  </div>
-                </div>
-              )}
-
-              {/* Quick Actions for Video Content */}
-              {item.hasVideo &&
-                !expandedItems.has(item.id) &&
-                itemClips.length > 0 && (
-                  <div className="mt-3 p-3 bg-purple-900/10 border border-purple-600/20 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <span className="text-purple-300 text-sm">
-                        🎬 {itemClips.length} clips available
-                      </span>
+                  {item.hasVideo && (
+                    <Link href={`/view-clips/${item.id}`}>
                       <button
-                        onClick={() => toggleExpanded(item.id)}
-                        className="text-purple-400 hover:text-purple-300 text-xs"
+                        className="px-3 py-2 text-purple-700 hover:text-purple-800 border border-purple-200 rounded-lg hover:bg-purple-50 transition-all"
+                        title="View video clips"
                       >
-                        View clips →
+                        🎬
                       </button>
+                    </Link>
+                  )}
+
+                  <button className="px-3 py-2 text-gray-600 hover:text-gray-800 border border-gray-200 rounded-lg hover:bg-gray-50">
+                    ⋯
+                  </button>
+                </div>
+
+                {/* Quick Info for Video Content */}
+                {item.hasVideo && (
+                  <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <span className="text-purple-700 text-sm">
+                        🎬 Video clips ready to view
+                      </span>
+                      <Link href={`/view-clips/${item.id}`}>
+                        <span className="text-purple-700 hover:text-purple-800 text-xs cursor-pointer font-medium">
+                          View clips →
+                        </span>
+                      </Link>
                     </div>
                   </div>
                 )}
 
-              {/* URL Preview for YouTube content */}
-              {item.type === "youtube" && item.url && (
-                <div className="mt-3 p-2 bg-red-900/20 border border-red-600/30 rounded-md">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-red-400 text-sm">📺</span>
-                    <a
-                      href={item.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-red-300 hover:text-red-200 text-xs truncate flex-1"
-                    >
-                      {item.url}
-                    </a>
+                {/* URL Preview for YouTube content */}
+                {item.type === "youtube" && item.url && (
+                  <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-md">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-red-600 text-sm">📺</span>
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-red-600 hover:text-red-700 text-xs truncate flex-1"
+                      >
+                        {item.url}
+                      </a>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Empty State */}
-      {filteredItems.length === 0 && (
-        <div className="text-center py-12">
-          <div className="text-muted-foreground text-4xl mb-4">📄</div>
-          <h3 className="text-white text-lg font-medium mb-2">
-            No content found
-          </h3>
-          <p className="text-muted-foreground">
-            {filter === "all"
-              ? "Upload some content to get started"
-              : `No ${filter} content found. Try a different filter or search term.`}
-          </p>
+                )}
+              </div>
+            );
+          })}
         </div>
-      )}
+
+        {/* Empty State */}
+        {filteredItems.length === 0 && (
+          <div className="bg-white rounded-xl border border-gray-200 p-12">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-teal-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg
+                  className="w-10 h-10 text-teal-700"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-gray-800 text-lg font-medium mb-2">
+                No videos yet
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Upload your first video to get started
+              </p>
+              <Link href="/upload">
+                <button className="flex items-center gap-2 px-6 py-3 bg-background text-white font-medium rounded-lg hover:bg-primary transition-colors mx-auto">
+                  <span>↑</span>
+                  <span>Upload Video</span>
+                </button>
+              </Link>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

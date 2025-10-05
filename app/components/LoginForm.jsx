@@ -4,14 +4,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation"; // Import useRouter
 import Swal from "sweetalert2";
 import { Eye, EyeOff } from "lucide-react";
+import { createApiFetch } from "./ApiFetch";
+
 const apiEndpoint = process.env.NEXT_PUBLIC_API_ENDPOINT;
 export default function LoginForm() {
+  const router = useRouter();
+  const apiFetch = createApiFetch(router);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
   const [show, setShow] = useState(false);
-  const router = useRouter(); // Initialize useRouter
+
   const [loading, setLoading] = useState(false);
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -77,12 +81,12 @@ export default function LoginForm() {
   };
 
   return (
-    <div className="bg-card py-8 px-6 shadow-xl rounded-xl border border-border">
+    <div className="bg-white text-black py-8 px-6 shadow-xl rounded-xl ">
       <form className="space-y-6" onSubmit={handleSubmit}>
         <div>
           <label
             htmlFor="email"
-            className="block text-sm font-medium text-muted-foreground mb-2"
+            className="block text-sm font-medium text-black mb-2"
           >
             Email Address
           </label>
@@ -93,7 +97,7 @@ export default function LoginForm() {
             required
             value={formData.email}
             onChange={handleChange}
-            className="w-full px-3 py-3 bg-input border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-foreground placeholder-muted-foreground"
+            className="w-full px-3 py-3 bg-white border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring placeholder-muted-foreground"
             placeholder="Enter your email"
           />
         </div>
@@ -101,7 +105,7 @@ export default function LoginForm() {
         <div>
           <label
             htmlFor="password"
-            className="block text-sm font-medium text-muted-foreground mb-2"
+            className="block text-sm font-medium text-black mb-2"
           >
             Password
           </label>
@@ -114,14 +118,18 @@ export default function LoginForm() {
               value={formData.password}
               onChange={handleChange}
               placeholder="Enter your password"
-              className="w-full px-3 py-3 pr-10 bg-input border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring text-foreground placeholder-muted-foreground"
+              className="w-full px-3 py-3 pr-10 bg-white border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring  placeholder-muted-foreground"
             />
             <button
               type="button"
               onClick={() => setShow(!show)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
-              {show ? <Eye size={20} /> : <EyeOff size={20} />}
+              {show ? (
+                <Eye size={20} className="text-black" />
+              ) : (
+                <EyeOff size={20} className="text-black" />
+              )}
             </button>
           </div>
         </div>
@@ -136,7 +144,7 @@ export default function LoginForm() {
             />
             <label
               htmlFor="remember-me"
-              className="ml-2 block text-sm text-muted-foreground"
+              className="ml-2 block text-sm text-black"
             >
               Remember me
             </label>
